@@ -573,6 +573,6 @@ if __name__ == '__main__':
     print("=" * 50)
     print("Data Analysis App Starting...")
     print(f"Data folder: {DATA_FOLDER}")
-    print("Open http://localhost:5000 in your browser")
+    print("Open http://localhost:3000 in your browser")
     print("=" * 50)
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=3000, host='0.0.0.0')
