@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase --version:*)",
+      "Bash(npm update:*)",
+      "Bash(scoop update:*)",
+      "Bash(supabase projects list:*)",
+      "Bash(curl:*)",
+      "Bash(supabase login:*)",
+      "Bash(python -c:*)",
+      "Bash(dir \"C:\\\\Users\\\\Anit\\\\Downloads\\\\January 27th Class\\\\data\")",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(gh auth:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd AI Data Analysis Web App\n\nSimple Flask web app for data analysis with:\n- File upload and management\n- Local intelligent analysis engine\n- Optional API integration\n- Interactive chat interface\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh repo create:*)",
+      "Bash(gh repo rename:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd complete web app with all files\n\n- Added rag_data.json\n- Added data/run_py-Supabse.py\n- Updated .gitignore to exclude only .env\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)"
+    ]
+  }
+}

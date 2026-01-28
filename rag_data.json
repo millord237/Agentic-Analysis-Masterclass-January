@@ -1,0 +1,92 @@
+[
+  {
+    "title": "Time Blocking: The Secret Weapon of Top Performers",
+    "content": "Time blocking is a productivity method where you divide your day into blocks of time, each dedicated to a specific task or group of tasks. Unlike a simple to-do list, time blocking forces you to confront how much time you actually have and allocate it intentionally. Step 1: Audit your current time usage for one week. Step 2: Identify your highest-priority tasks and assign them to your peak energy hours. Step 3: Group similar tasks together to minimize context switching. Step 4: Include buffer blocks for unexpected interruptions. Step 5: Review and adjust weekly. Research shows that people who use time blocking are up to 80% more productive than those who rely on reactive task management.",
+    "summary": "A comprehensive guide to implementing time blocking for maximum daily productivity.",
+    "category": "productivity",
+    "tags": ["time-management", "scheduling", "focus"],
+    "source": "internal",
+    "author": "Productivity Team"
+  },
+  {
+    "title": "The Science of Habit Stacking: Build Routines That Stick",
+    "content": "Habit stacking is a strategy where you link a new habit to an existing one, creating a chain of behaviors that become automatic over time. The concept, popularized by James Clear, leverages your brain existing neural pathways. The formula is simple: After I [CURRENT HABIT], I will [NEW HABIT]. For example: After I pour my morning coffee, I will write in my gratitude journal for two minutes. The key is to start small and anchor new behaviors to habits that are already deeply ingrained. Over time, you can build complex routines by stacking multiple habits together. Studies in behavioral psychology confirm that contextual cues dramatically increase habit formation success rates.",
+    "summary": "How to use habit stacking to build lasting routines by linking new behaviors to existing ones.",
+    "category": "habits",
+    "tags": ["habit-formation", "routines", "behavioral-science"],
+    "source": "internal",
+    "author": "Wellness Team"
+  },
+  {
+    "title": "Deep Work: How to Achieve Flow State on Demand",
+    "content": "Deep work, a term coined by Cal Newport, refers to professional activities performed in a state of distraction-free concentration that push your cognitive capabilities to their limit. To cultivate deep work: 1) Schedule dedicated deep work sessions of 90-120 minutes. 2) Eliminate all digital distractions. 3) Create a pre-work ritual that signals your brain it is time to focus. 4) Train your concentration like a muscle by gradually increasing session length. 5) Track your deep work hours weekly. The average knowledge worker manages only 2.5 hours of deep work per day, yet those hours produce the majority of meaningful output.",
+    "summary": "Strategies for entering and sustaining deep focus to produce your most valuable work.",
+    "category": "focus",
+    "tags": ["deep-work", "flow-state", "concentration"],
+    "source": "internal",
+    "author": "Productivity Team"
+  },
+  {
+    "title": "Mindset Shifts: From Fixed to Growth Thinking",
+    "content": "Carol Dweck research on mindset reveals two fundamental beliefs people hold about their abilities. A fixed mindset assumes intelligence and talent are static traits. A growth mindset sees them as qualities that can be developed through effort and learning. To shift toward growth thinking: 1) Replace I cannot do this with I cannot do this yet. 2) Embrace challenges as opportunities to learn rather than threats to your ego. 3) View criticism as useful feedback, not personal attacks. 4) Celebrate effort and process, not just outcomes. 5) Study how others succeeded through persistence, not just talent.",
+    "summary": "Understanding and adopting a growth mindset to unlock learning and resilience.",
+    "category": "mindset",
+    "tags": ["growth-mindset", "self-improvement", "psychology"],
+    "source": "internal",
+    "author": "Coaching Team"
+  },
+  {
+    "title": "Energy Management: Why It Matters More Than Time Management",
+    "content": "Most productivity advice focuses on managing time, but your energy is the real limiting factor. The four dimensions of energy are physical, emotional, mental, and spiritual. Physical energy is managed through sleep, nutrition, and exercise. Emotional energy requires positive relationships and stress management. Mental energy demands focus rituals and recovery breaks. Spiritual energy comes from working with purpose and alignment. Map your energy peaks and valleys over a week. Schedule demanding tasks during high-energy windows. Take deliberate recovery breaks every 90 minutes. Prioritize 7-8 hours of sleep above all else.",
+    "summary": "A framework for managing personal energy across four dimensions for sustained high performance.",
+    "category": "wellness",
+    "tags": ["energy", "health", "performance"],
+    "source": "internal",
+    "author": "Wellness Team"
+  },
+  {
+    "title": "The Weekly Review: Your Key to Staying on Track",
+    "content": "A weekly review is a structured practice where you step back from daily execution to assess progress, realign priorities, and plan ahead. It typically includes: 1) Clearing your inbox and capture tools. 2) Reviewing completed tasks and celebrating wins. 3) Assessing progress on active projects and goals. 4) Identifying stuck items and determining next actions. 5) Planning the upcoming week with intention. Set aside 30-60 minutes every Friday or Sunday. The weekly review bridges the gap between big-picture goals and daily actions. Consistency matters more than perfection.",
+    "summary": "How to conduct an effective weekly review to maintain alignment between goals and daily actions.",
+    "category": "planning",
+    "tags": ["weekly-review", "gtd", "reflection"],
+    "source": "internal",
+    "author": "Productivity Team"
+  },
+  {
+    "title": "Building Resilience: Bouncing Back from Setbacks",
+    "content": "Resilience is not about avoiding failure, it is about recovering quickly and learning from adversity. Key factors that build resilience include: 1) Social connection, having a support network you can lean on. 2) Cognitive flexibility, the ability to reframe negative situations. 3) Self-efficacy, believing in your capacity to handle challenges. 4) Purpose, having a clear reason to keep going. Practice self-compassion instead of self-criticism after failures. Develop a setback recovery ritual. Keep a failure resume documenting what you learned from each setback. Resilience is a skill, not a trait.",
+    "summary": "Practical strategies for developing resilience and recovering effectively from setbacks.",
+    "category": "mindset",
+    "tags": ["resilience", "mental-health", "personal-growth"],
+    "source": "internal",
+    "author": "Coaching Team"
+  },
+  {
+    "title": "Effective Communication: The Foundation of Team Productivity",
+    "content": "Poor communication is the number one cause of project failure and team dysfunction. Effective communication starts with clarity of intent. Key principles: 1) Lead with the main point, then provide context. 2) Match the communication channel to the message. 3) Practice active listening by paraphrasing what you heard before responding. 4) Give feedback using the SBI model: Situation, Behavior, Impact. 5) Document decisions and action items after every meeting. Teams that communicate effectively are 25% more productive and report significantly higher satisfaction.",
+    "summary": "Core principles for clear, effective communication that drives team productivity.",
+    "category": "communication",
+    "tags": ["teamwork", "leadership", "collaboration"],
+    "source": "internal",
+    "author": "Leadership Team"
+  },
+  {
+    "title": "The Pomodoro Technique: Focus in Short Bursts",
+    "content": "The Pomodoro Technique, developed by Francesco Cirillo, is a time management method that uses timed intervals to boost focus and prevent burnout. How it works: 1) Choose a single task to work on. 2) Set a timer for 25 minutes (one Pomodoro). 3) Work with full focus until the timer rings. 4) Take a 5-minute break. 5) After four Pomodoros, take a longer 15-30 minute break. The method works because it breaks overwhelming tasks into manageable chunks, creates urgency through the timer, and enforces regular rest. Track your completed Pomodoros to understand your true capacity.",
+    "summary": "A step-by-step guide to using the Pomodoro Technique for focused, sustainable work sessions.",
+    "category": "productivity",
+    "tags": ["pomodoro", "time-management", "focus"],
+    "source": "internal",
+    "author": "Productivity Team"
+  },
+  {
+    "title": "Journaling for Clarity: Write Your Way to Better Decisions",
+    "content": "Journaling is one of the most underrated personal development tools. Writing clarifies thinking, processes emotions, and creates a record of your growth. Effective journaling methods include: 1) Morning Pages, three pages of stream-of-consciousness writing first thing in the morning. 2) Gratitude journaling, listing three things you are grateful for daily. 3) Decision journaling, writing out pros, cons, and your reasoning before major decisions. 4) Reflection journaling, weekly entries reviewing what went well, what did not, and what you learned. Even five minutes of daily journaling compounds into profound self-awareness over months.",
+    "summary": "Different journaling methods to improve clarity, decision-making, and self-awareness.",
+    "category": "self-reflection",
+    "tags": ["journaling", "mindfulness", "decision-making"],
+    "source": "internal",
+    "author": "Wellness Team"
+  }
+]
