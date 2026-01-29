@@ -1,498 +1,375 @@
 """
-Simple Data Analysis Web App - Local AI Analysis Engine
+AI Data Analysis Web App with Web Search
+Executes Python scripts based on user queries using AI API
 """
+from flask import Flask, request, jsonify
 import os
+import subprocess
+import sys
 import json
-import pandas as pd
-import numpy as np
-from flask import Flask, render_template_string, request, jsonify
-import requests
-import re
 
 app = Flask(__name__)
 
 # Configuration
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-API_BASE_URL = os.environ.get("ANTHROPIC_BASE_URL", "https://api.openanalyst.com")
-API_KEY = os.environ.get("ANTHROPIC_AUTH_TOKEN", "")
+SCRIPTS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
 
 # Ensure data folder exists
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+
+@app.route('/')
+def index():
+    return '''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Analysis App</title>
+    <title>AI Data Analyst</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; height: 100vh; display: flex; }
-
-        .sidebar { width: 280px; background: #16213e; padding: 20px; border-right: 1px solid #0f3460; display: flex; flex-direction: column; }
-        .sidebar h2 { color: #e94560; margin-bottom: 20px; font-size: 18px; }
-        .upload-zone { border: 2px dashed #0f3460; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: all 0.3s; }
-        .upload-zone:hover { border-color: #e94560; background: rgba(233, 69, 96, 0.1); }
-        .upload-zone input { display: none; }
-
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; min-height: 100vh; display: flex; }
+        .sidebar { width: 300px; background: rgba(22, 33, 62, 0.9); padding: 20px; border-right: 1px solid #e94560; display: flex; flex-direction: column; }
+        .sidebar h2 { color: #e94560; margin-bottom: 20px; }
+        .upload-zone { border: 2px dashed #e94560; border-radius: 10px; padding: 30px 20px; text-align: center; cursor: pointer; margin-bottom: 20px; transition: 0.3s; }
+        .upload-zone:hover { background: rgba(233, 69, 96, 0.1); }
         .file-list { flex: 1; overflow-y: auto; }
-        .file-item { display: flex; align-items: center; padding: 10px; margin: 5px 0; background: #0f3460; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-        .file-item:hover { background: #1a4a7a; }
-        .file-item.selected { background: #e94560; }
-        .file-item input { margin-right: 10px; }
-        .file-name { flex: 1; font-size: 13px; word-break: break-all; }
-        .file-size { font-size: 11px; color: #888; }
-
-        .main { flex: 1; display: flex; flex-direction: column; }
-        .header { padding: 20px; background: #16213e; border-bottom: 1px solid #0f3460; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 24px; color: #e94560; }
-        .mode-toggle { display: flex; gap: 10px; }
-        .mode-btn { padding: 8px 16px; border: 1px solid #0f3460; background: transparent; color: #888; border-radius: 6px; cursor: pointer; font-size: 12px; }
-        .mode-btn.active { background: #e94560; color: white; border-color: #e94560; }
-
-        .content { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow: hidden; }
-
-        .selected-files { margin-bottom: 15px; padding: 10px; background: #16213e; border-radius: 8px; }
-        .selected-files span { display: inline-block; background: #e94560; padding: 4px 10px; border-radius: 4px; margin: 3px; font-size: 12px; }
-
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: #16213e; border-radius: 8px; overflow: hidden; }
-        .messages { flex: 1; overflow-y: auto; padding: 20px; }
-        .message { margin-bottom: 15px; padding: 12px 16px; border-radius: 8px; max-width: 85%; }
-        .message.user { background: #e94560; margin-left: auto; }
-        .message.assistant { background: #0f3460; }
-        .message pre { white-space: pre-wrap; font-family: inherit; margin: 0; line-height: 1.5; }
-
-        .input-area { display: flex; padding: 15px; background: #0f3460; gap: 10px; }
-        .input-area textarea { flex: 1; padding: 12px; border: none; border-radius: 6px; background: #1a1a2e; color: #eee; resize: none; font-family: inherit; font-size: 14px; }
-        .input-area textarea:focus { outline: 2px solid #e94560; }
-        .input-area button { padding: 12px 24px; background: #e94560; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-        .input-area button:hover { background: #ff6b6b; }
-        .input-area button:disabled { background: #666; cursor: not-allowed; }
-
-        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        .file-item { display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+        .file-item:hover { background: rgba(233, 69, 96, 0.2); }
+        .file-item.selected { background: rgba(233, 69, 96, 0.3); border: 1px solid #e94560; }
+        .file-item input { margin-right: 10px; accent-color: #e94560; }
+        .file-name { flex: 1; font-size: 0.9em; word-break: break-all; }
+        .file-size { font-size: 0.8em; color: #888; }
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h1 { color: #e94560; }
+        .mode-toggle { display: flex; gap: 5px; }
+        .mode-btn { padding: 8px 16px; border: 1px solid #e94560; background: transparent; color: #fff; border-radius: 20px; cursor: pointer; font-size: 0.85em; transition: 0.3s; }
+        .mode-btn:hover { background: rgba(233, 69, 96, 0.2); }
+        .mode-btn.active { background: linear-gradient(135deg, #e94560, #ff6b6b); border-color: transparent; }
+        .selected-files { background: rgba(233, 69, 96, 0.1); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; }
+        .quick-queries { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .quick-query { background: rgba(233, 69, 96, 0.2); border: 1px solid rgba(233, 69, 96, 0.4); padding: 6px 12px; border-radius: 15px; cursor: pointer; color: #fff; font-size: 0.85em; }
+        .quick-query:hover { background: rgba(233, 69, 96, 0.4); }
+        .quick-query.web { background: rgba(100, 200, 255, 0.2); border-color: rgba(100, 200, 255, 0.4); }
+        .quick-query.web:hover { background: rgba(100, 200, 255, 0.4); }
+        .chat-area { flex: 1; background: rgba(0,0,0,0.2); border-radius: 15px; padding: 20px; overflow-y: auto; margin-bottom: 20px; }
+        .message { margin-bottom: 20px; }
+        .message.user { text-align: right; }
+        .message.user .bubble { background: linear-gradient(135deg, #e94560, #ff6b6b); display: inline-block; padding: 12px 18px; border-radius: 18px 18px 4px 18px; max-width: 70%; }
+        .message.assistant .bubble { background: rgba(255,255,255,0.1); padding: 15px 20px; border-radius: 18px; max-width: 85%; border-left: 3px solid #e94560; line-height: 1.6; white-space: pre-wrap; }
+        .message.assistant .bubble.web-result { border-left-color: #64c8ff; }
+        .script-info { font-size: 0.75em; color: #888; margin-top: 8px; }
+        .input-area { display: flex; gap: 10px; }
+        .input-area textarea { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 12px; padding: 15px; color: #fff; font-size: 1em; resize: none; height: 60px; }
+        .input-area textarea:focus { outline: none; border-color: #e94560; }
+        .input-area button { background: linear-gradient(135deg, #e94560, #ff6b6b); border: none; border-radius: 12px; padding: 0 25px; color: #fff; font-weight: bold; cursor: pointer; }
+        .input-area button.web-btn { background: linear-gradient(135deg, #64c8ff, #36a5eb); }
+        .input-area button:disabled { opacity: 0.5; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="sidebar">
         <h2>Data Files</h2>
-        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" multiple onchange="uploadFiles(this.files)">
-            <p>Click or drag files here</p>
-            <p style="font-size: 12px; color: #888; margin-top: 5px;">CSV, Excel supported</p>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <div>Drop CSV/Excel files here</div>
+            <div style="margin-top: 10px; font-size: 0.9em; color: #888;">or click to upload</div>
         </div>
-        <div class="file-list" id="fileList"></div>
+        <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.xls" style="display: none;" onchange="uploadFiles(this.files)">
+        <div class="file-list" id="fileList">Loading files...</div>
     </div>
 
-    <div class="main">
+    <div class="main-content">
         <div class="header">
             <h1>AI Data Analyst</h1>
             <div class="mode-toggle">
-                <button class="mode-btn active" id="localBtn" onclick="setMode('local')">Local Analysis</button>
-                <button class="mode-btn" id="apiBtn" onclick="setMode('api')">API Mode</button>
+                <button class="mode-btn active" id="dataBtn" onclick="setMode('data')">Data Analysis</button>
+                <button class="mode-btn" id="webBtn" onclick="setMode('web')">Web Search</button>
             </div>
         </div>
-        <div class="content">
-            <div class="selected-files" id="selectedFiles">
-                <strong>Selected:</strong> <span style="background: #666;">None - Select files from sidebar</span>
-            </div>
-            <div class="chat-area">
-                <div class="messages" id="messages">
-                    <div class="message assistant">
-                        <pre>Welcome! Upload data files and select them from the sidebar.
+        <div class="selected-files" id="selectedFiles">No files selected - Select files from the sidebar</div>
+        <div class="quick-queries" id="quickQueries">
+            <span class="quick-query" onclick="setQuery('summary')">Summary</span>
+            <span class="quick-query" onclick="setQuery('top brands by sales')">Top Brands</span>
+            <span class="quick-query" onclick="setQuery('compare regions')">Compare Regions</span>
+            <span class="quick-query" onclick="setQuery('sales trends over time')">Trends</span>
+            <span class="quick-query" onclick="setQuery('profit analysis')">Profits</span>
+        </div>
+        <div class="chat-area" id="chatArea">
+            <div class="message assistant">
+                <div class="bubble">Welcome! I'm your AI Assistant.
 
-Ask me anything:
-- "summary" - Get full data overview
-- "top brands/products/regions" - Find top performers
-- "compare X vs Y" - Compare categories
-- "trends" - Analyze patterns over time
-- "profit analysis" - Profitability insights
-- Or ask any custom question!
+<b>Data Analysis Mode:</b>
+- Select files from sidebar, then ask questions
+- "summary", "top brands", "compare", "trends", "profits"
 
-Select files and start asking questions.</pre>
-                    </div>
-                </div>
-                <div class="input-area">
-                    <textarea id="userInput" placeholder="Ask about your data..." rows="2" onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); analyze(); }"></textarea>
-                    <button id="analyzeBtn" onclick="analyze()">Analyze</button>
-                </div>
+<b>Web Search Mode:</b>
+- Click "Web Search" to search the internet
+- Get real-time information with sources</div>
             </div>
+        </div>
+        <div class="input-area">
+            <textarea id="queryInput" placeholder="Ask anything about your data..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitQuery();}"></textarea>
+            <button id="submitBtn" onclick="submitQuery()">Analyze</button>
         </div>
     </div>
 
     <script>
-        let selectedFiles = new Set();
-        let analysisMode = 'local';
+    var selectedFiles = [];
+    var currentMode = 'data';
 
-        loadFiles();
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('dataBtn').className = 'mode-btn' + (mode === 'data' ? ' active' : '');
+        document.getElementById('webBtn').className = 'mode-btn' + (mode === 'web' ? ' active' : '');
 
-        function setMode(mode) {
-            analysisMode = mode;
-            document.getElementById('localBtn').classList.toggle('active', mode === 'local');
-            document.getElementById('apiBtn').classList.toggle('active', mode === 'api');
+        var btn = document.getElementById('submitBtn');
+        var input = document.getElementById('queryInput');
+        var filesDiv = document.getElementById('selectedFiles');
+        var quickDiv = document.getElementById('quickQueries');
+
+        if (mode === 'web') {
+            btn.textContent = 'Search';
+            btn.className = 'web-btn';
+            input.placeholder = 'Search the web...';
+            filesDiv.style.display = 'none';
+            quickDiv.innerHTML = '<span class="quick-query web" onclick="setQuery(\\x27latest AI news\\x27)">AI News</span>' +
+                '<span class="quick-query web" onclick="setQuery(\\x27python best practices 2024\\x27)">Python Tips</span>' +
+                '<span class="quick-query web" onclick="setQuery(\\x27data science trends\\x27)">Data Science</span>' +
+                '<span class="quick-query web" onclick="setQuery(\\x27machine learning tutorials\\x27)">ML Tutorials</span>';
+        } else {
+            btn.textContent = 'Analyze';
+            btn.className = '';
+            input.placeholder = 'Ask anything about your data...';
+            filesDiv.style.display = 'block';
+            quickDiv.innerHTML = '<span class="quick-query" onclick="setQuery(\\x27summary\\x27)">Summary</span>' +
+                '<span class="quick-query" onclick="setQuery(\\x27top brands by sales\\x27)">Top Brands</span>' +
+                '<span class="quick-query" onclick="setQuery(\\x27compare regions\\x27)">Compare Regions</span>' +
+                '<span class="quick-query" onclick="setQuery(\\x27sales trends over time\\x27)">Trends</span>' +
+                '<span class="quick-query" onclick="setQuery(\\x27profit analysis\\x27)">Profits</span>';
         }
+    }
 
-        async function loadFiles() {
-            const res = await fetch('/api/files');
-            const files = await res.json();
-            const list = document.getElementById('fileList');
-            list.innerHTML = files.map(f => `
-                <div class="file-item ${selectedFiles.has(f.name) ? 'selected' : ''}" onclick="toggleFile('${f.name}', this)">
-                    <input type="checkbox" ${selectedFiles.has(f.name) ? 'checked' : ''} onclick="event.stopPropagation(); toggleFile('${f.name}', this.parentElement)">
-                    <span class="file-name">${f.name}</span>
-                    <span class="file-size">${formatSize(f.size)}</span>
-                </div>
-            `).join('');
-            updateSelectedDisplay();
-        }
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
 
-        function toggleFile(name, el) {
-            if (selectedFiles.has(name)) {
-                selectedFiles.delete(name);
-                el.classList.remove('selected');
-                el.querySelector('input').checked = false;
-            } else {
-                selectedFiles.add(name);
-                el.classList.add('selected');
-                el.querySelector('input').checked = true;
-            }
-            updateSelectedDisplay();
-        }
-
-        function updateSelectedDisplay() {
-            const div = document.getElementById('selectedFiles');
-            if (selectedFiles.size === 0) {
-                div.innerHTML = '<strong>Selected:</strong> <span style="background: #666;">None - Select files from sidebar</span>';
-            } else {
-                div.innerHTML = '<strong>Selected:</strong> ' + Array.from(selectedFiles).map(f => `<span>${f}</span>`).join('');
-            }
-        }
-
-        async function uploadFiles(files) {
-            for (let file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-                await fetch('/api/upload', { method: 'POST', body: formData });
-            }
-            loadFiles();
-            addMessage('assistant', `Uploaded ${files.length} file(s) successfully!`);
-        }
-
-        async function analyze() {
-            const input = document.getElementById('userInput');
-            const btn = document.getElementById('analyzeBtn');
-            const query = input.value.trim();
-
-            if (!query) return;
-            if (selectedFiles.size === 0) {
-                addMessage('assistant', 'Please select at least one file from the sidebar first.');
-                return;
-            }
-
-            addMessage('user', query);
-            input.value = '';
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loading"></span>';
-
-            const thinkingId = addMessage('assistant', 'Analyzing your data...');
-
-            try {
-                const res = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        files: Array.from(selectedFiles),
-                        query: query,
-                        mode: analysisMode
-                    })
-                });
-                const data = await res.json();
-                document.getElementById(thinkingId).remove();
-
-                if (data.error) {
-                    addMessage('assistant', 'Error: ' + data.error);
+    function loadFiles() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/files', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                var files = JSON.parse(xhr.responseText);
+                var html = '';
+                if (files.length === 0) {
+                    html = '<div style="color: #888; padding: 10px;">No files in data folder</div>';
                 } else {
-                    addMessage('assistant', data.response);
+                    for (var i = 0; i < files.length; i++) {
+                        var f = files[i];
+                        var isSelected = selectedFiles.indexOf(f.name) >= 0;
+                        html += '<div class="file-item' + (isSelected ? ' selected' : '') + '" onclick="toggleFile(\\x27'+f.name+'\\x27)">';
+                        html += '<input type="checkbox"' + (isSelected ? ' checked' : '') + '>';
+                        html += '<span class="file-name">' + f.name + '</span>';
+                        html += '<span class="file-size">' + formatSize(f.size) + '</span>';
+                        html += '</div>';
+                    }
                 }
-            } catch (err) {
-                document.getElementById(thinkingId).remove();
-                addMessage('assistant', 'Error: ' + err.message);
+                document.getElementById('fileList').innerHTML = html;
+                updateSelected();
             }
+        };
+        xhr.send();
+    }
 
-            btn.disabled = false;
-            btn.innerHTML = 'Analyze';
+    function toggleFile(name) {
+        var idx = selectedFiles.indexOf(name);
+        if (idx >= 0) {
+            selectedFiles.splice(idx, 1);
+        } else {
+            selectedFiles.push(name);
+        }
+        loadFiles();
+    }
+
+    function updateSelected() {
+        var el = document.getElementById('selectedFiles');
+        if (selectedFiles.length === 0) {
+            el.textContent = 'No files selected - Select files from the sidebar';
+        } else {
+            el.textContent = 'Selected: ' + selectedFiles.join(', ');
+        }
+    }
+
+    function uploadFiles(files) {
+        var uploaded = 0;
+        for (var i = 0; i < files.length; i++) {
+            var formData = new FormData();
+            formData.append('file', files[i]);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    uploaded++;
+                    if (uploaded === files.length) {
+                        loadFiles();
+                    }
+                }
+            };
+            xhr.send(formData);
+        }
+    }
+
+    function setQuery(q) {
+        document.getElementById('queryInput').value = q;
+    }
+
+    function submitQuery() {
+        if (currentMode === 'web') {
+            webSearch();
+        } else {
+            analyze();
+        }
+    }
+
+    function analyze() {
+        var query = document.getElementById('queryInput').value.trim();
+        if (!query) return;
+        if (selectedFiles.length === 0) {
+            alert('Please select at least one data file from the sidebar');
+            return;
         }
 
-        function addMessage(role, text) {
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-            div.id = 'msg-' + Date.now();
-            div.innerHTML = `<pre>${escapeHtml(text)}</pre>`;
-            document.getElementById('messages').appendChild(div);
-            div.scrollIntoView({ behavior: 'smooth' });
-            return div.id;
-        }
+        var btn = document.getElementById('submitBtn');
+        var chatArea = document.getElementById('chatArea');
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        var userDiv = document.createElement('div');
+        userDiv.className = 'message user';
+        userDiv.innerHTML = '<div class="bubble">' + query.replace(/</g, '&lt;') + '</div>';
+        chatArea.appendChild(userDiv);
 
-        function formatSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-        }
+        var loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message assistant';
+        loadingDiv.id = 'loadingMsg';
+        loadingDiv.innerHTML = '<div class="bubble">Analyzing with AI... <span class="loading"></span></div>';
+        chatArea.appendChild(loadingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
 
-        document.querySelector('.upload-zone').addEventListener('dragover', e => {
-            e.preventDefault();
-            e.currentTarget.style.borderColor = '#e94560';
-        });
-        document.querySelector('.upload-zone').addEventListener('dragleave', e => {
-            e.currentTarget.style.borderColor = '#0f3460';
-        });
-        document.querySelector('.upload-zone').addEventListener('drop', e => {
-            e.preventDefault();
-            e.currentTarget.style.borderColor = '#0f3460';
-            uploadFiles(e.dataTransfer.files);
-        });
+        btn.disabled = true;
+        document.getElementById('queryInput').value = '';
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/analyze', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                var loading = document.getElementById('loadingMsg');
+                if (loading) loading.remove();
+
+                var result = '';
+                var script = 'N/A';
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    result = data.result || data.error || 'No response';
+                    script = data.script || 'N/A';
+                } catch(e) {
+                    result = 'Error: ' + e.message;
+                }
+
+                var respDiv = document.createElement('div');
+                respDiv.className = 'message assistant';
+                respDiv.innerHTML = '<div class="bubble">' + result.replace(/</g, '&lt;') + '</div><div class="script-info">Script: ' + script + '</div>';
+                chatArea.appendChild(respDiv);
+                chatArea.scrollTop = chatArea.scrollHeight;
+                btn.disabled = false;
+            }
+        };
+        xhr.send(JSON.stringify({query: query, files: selectedFiles}));
+    }
+
+    function webSearch() {
+        var query = document.getElementById('queryInput').value.trim();
+        if (!query) return;
+
+        var btn = document.getElementById('submitBtn');
+        var chatArea = document.getElementById('chatArea');
+
+        var userDiv = document.createElement('div');
+        userDiv.className = 'message user';
+        userDiv.innerHTML = '<div class="bubble">[Web Search] ' + query.replace(/</g, '&lt;') + '</div>';
+        chatArea.appendChild(userDiv);
+
+        var loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message assistant';
+        loadingDiv.id = 'loadingMsg';
+        loadingDiv.innerHTML = '<div class="bubble web-result">Searching the web... <span class="loading"></span></div>';
+        chatArea.appendChild(loadingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+
+        btn.disabled = true;
+        document.getElementById('queryInput').value = '';
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/web-search', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                var loading = document.getElementById('loadingMsg');
+                if (loading) loading.remove();
+
+                var result = '';
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    result = data.result || data.error || 'No response';
+                } catch(e) {
+                    result = 'Error: ' + e.message;
+                }
+
+                var respDiv = document.createElement('div');
+                respDiv.className = 'message assistant';
+                respDiv.innerHTML = '<div class="bubble web-result">' + result.replace(/</g, '&lt;') + '</div><div class="script-info">Source: Perplexity Web Search</div>';
+                chatArea.appendChild(respDiv);
+                chatArea.scrollTop = chatArea.scrollHeight;
+                btn.disabled = false;
+            }
+        };
+        xhr.send(JSON.stringify({query: query}));
+    }
+
+    // Drag and drop
+    var uploadZone = document.getElementById('uploadZone');
+    uploadZone.ondragover = function(e) { e.preventDefault(); this.style.background = 'rgba(233, 69, 96, 0.2)'; };
+    uploadZone.ondragleave = function(e) { e.preventDefault(); this.style.background = ''; };
+    uploadZone.ondrop = function(e) { e.preventDefault(); this.style.background = ''; uploadFiles(e.dataTransfer.files); };
+
+    // Load files on start
+    loadFiles();
     </script>
 </body>
-</html>
-"""
+</html>'''
 
-def clean_numeric(series):
-    """Clean numeric columns by removing $, commas, % etc."""
-    if series.dtype == 'object':
-        cleaned = series.astype(str).str.replace(r'[\$,\"%]', '', regex=True).str.strip()
-        try:
-            return pd.to_numeric(cleaned, errors='coerce')
-        except:
-            return series
-    return series
-
-def load_dataframe(filepath):
-    """Load a dataframe and clean it."""
-    if filepath.endswith('.csv'):
-        df = pd.read_csv(filepath)
-    else:
-        df = pd.read_excel(filepath)
-
-    # Clean numeric columns
-    for col in df.columns:
-        if df[col].dtype == 'object':
-            # Check if it looks numeric
-            sample = df[col].dropna().head(10).astype(str)
-            if sample.str.contains(r'^\s*[\$]?[\d,]+\.?\d*\s*%?\s*$', regex=True).mean() > 0.5:
-                df[col + '_clean'] = clean_numeric(df[col])
-
-    return df
-
-def analyze_locally(dataframes, query):
-    """Perform intelligent local analysis based on the query."""
-    query_lower = query.lower()
-    results = []
-
-    for filename, df in dataframes.items():
-        result = f"\n{'='*50}\nFILE: {filename}\n{'='*50}\n"
-
-        # Basic info
-        result += f"Rows: {len(df):,} | Columns: {len(df.columns)}\n"
-
-        # Detect numeric columns
-        numeric_cols = []
-        for col in df.columns:
-            if '_clean' in col:
-                continue
-            clean_col = col + '_clean'
-            if clean_col in df.columns:
-                numeric_cols.append((col, clean_col))
-            elif df[col].dtype in ['int64', 'float64']:
-                numeric_cols.append((col, col))
-
-        # Detect categorical columns
-        cat_cols = [col for col in df.columns if df[col].dtype == 'object' and '_clean' not in col]
-
-        # SUMMARY / OVERVIEW
-        if any(word in query_lower for word in ['summary', 'overview', 'describe', 'info', 'about']):
-            result += f"\nCOLUMNS: {', '.join(df.columns[:15])}"
-            if len(df.columns) > 15:
-                result += f" ... (+{len(df.columns)-15} more)"
-
-            result += "\n\nNUMERIC SUMMARY:\n"
-            for display_col, data_col in numeric_cols[:6]:
-                series = df[data_col].dropna()
-                if len(series) > 0:
-                    result += f"  {display_col}: Sum={series.sum():,.2f}, Avg={series.mean():,.2f}, Min={series.min():,.2f}, Max={series.max():,.2f}\n"
-
-            result += "\nCATEGORICAL BREAKDOWN:\n"
-            for col in cat_cols[:5]:
-                unique = df[col].nunique()
-                top = df[col].value_counts().head(3)
-                result += f"  {col}: {unique} unique values. Top: {', '.join([f'{k}({v})' for k,v in top.items()])}\n"
-
-        # TOP / BEST / HIGHEST
-        elif any(word in query_lower for word in ['top', 'best', 'highest', 'most', 'largest', 'leading']):
-            # Find what to group by
-            group_col = None
-            for col in cat_cols:
-                col_lower = col.lower()
-                if any(term in query_lower for term in [col_lower, col_lower.replace(' ', ''), col_lower[:4]]):
-                    group_col = col
-                    break
-            if not group_col and cat_cols:
-                # Try to find relevant column
-                for col in cat_cols:
-                    if any(term in col.lower() for term in ['brand', 'product', 'name', 'category', 'region', 'retailer']):
-                        group_col = col
-                        break
-                if not group_col:
-                    group_col = cat_cols[0]
-
-            # Find metric column
-            metric_col = None
-            for display_col, data_col in numeric_cols:
-                col_lower = display_col.lower()
-                if any(term in col_lower for term in ['sales', 'revenue', 'total', 'profit', 'amount']):
-                    metric_col = (display_col, data_col)
-                    break
-            if not metric_col and numeric_cols:
-                metric_col = numeric_cols[0]
-
-            if group_col and metric_col:
-                grouped = df.groupby(group_col)[metric_col[1]].sum().sort_values(ascending=False).head(10)
-                result += f"\nTOP 10 {group_col.upper()} BY {metric_col[0].upper()}:\n"
-                for i, (name, value) in enumerate(grouped.items(), 1):
-                    pct = (value / grouped.sum()) * 100
-                    result += f"  {i}. {name}: {value:,.2f} ({pct:.1f}%)\n"
-
-        # COMPARE
-        elif any(word in query_lower for word in ['compare', 'versus', 'vs', 'difference', 'between']):
-            for col in cat_cols:
-                if df[col].nunique() <= 10:
-                    result += f"\nCOMPARISON BY {col.upper()}:\n"
-                    for display_col, data_col in numeric_cols[:4]:
-                        grouped = df.groupby(col)[data_col].agg(['sum', 'mean', 'count'])
-                        result += f"\n  {display_col}:\n"
-                        for idx, row in grouped.iterrows():
-                            result += f"    {idx}: Total={row['sum']:,.2f}, Avg={row['mean']:,.2f}, Count={int(row['count'])}\n"
-                    break
-
-        # TREND / TIME / PATTERN
-        elif any(word in query_lower for word in ['trend', 'time', 'pattern', 'over time', 'monthly', 'daily', 'growth']):
-            # Find date column
-            date_col = None
-            for col in df.columns:
-                if any(term in col.lower() for term in ['date', 'time', 'day', 'month', 'year']):
-                    date_col = col
-                    break
-
-            if date_col:
-                try:
-                    df['_date'] = pd.to_datetime(df[date_col], errors='coerce')
-                    df['_month'] = df['_date'].dt.to_period('M')
-
-                    result += f"\nTRENDS OVER TIME (by {date_col}):\n"
-                    for display_col, data_col in numeric_cols[:3]:
-                        monthly = df.groupby('_month')[data_col].sum()
-                        if len(monthly) > 1:
-                            result += f"\n  {display_col} by Month:\n"
-                            for period, value in monthly.tail(12).items():
-                                result += f"    {period}: {value:,.2f}\n"
-                except:
-                    result += "\nCould not parse date column for trend analysis.\n"
-            else:
-                result += "\nNo date column found for trend analysis.\n"
-
-        # PROFIT / MARGIN
-        elif any(word in query_lower for word in ['profit', 'margin', 'profitable', 'earnings']):
-            profit_cols = [(d, c) for d, c in numeric_cols if any(term in d.lower() for term in ['profit', 'margin', 'earning'])]
-
-            if profit_cols:
-                result += "\nPROFITABILITY ANALYSIS:\n"
-                for display_col, data_col in profit_cols:
-                    series = df[data_col].dropna()
-                    result += f"\n  {display_col}:\n"
-                    result += f"    Total: {series.sum():,.2f}\n"
-                    result += f"    Average: {series.mean():,.2f}\n"
-                    result += f"    Min: {series.min():,.2f}\n"
-                    result += f"    Max: {series.max():,.2f}\n"
-
-                # By category if available
-                for col in cat_cols[:2]:
-                    if df[col].nunique() <= 15:
-                        result += f"\n  By {col}:\n"
-                        for display_col, data_col in profit_cols[:1]:
-                            grouped = df.groupby(col)[data_col].sum().sort_values(ascending=False)
-                            for name, value in grouped.items():
-                                result += f"    {name}: {value:,.2f}\n"
-            else:
-                result += "\nNo profit/margin columns found.\n"
-
-        # REGION / LOCATION / GEOGRAPHY
-        elif any(word in query_lower for word in ['region', 'location', 'geography', 'state', 'city', 'area']):
-            geo_cols = [col for col in cat_cols if any(term in col.lower() for term in ['region', 'state', 'city', 'country', 'location', 'area'])]
-
-            if geo_cols:
-                result += "\nGEOGRAPHIC ANALYSIS:\n"
-                for geo_col in geo_cols[:2]:
-                    result += f"\n  By {geo_col}:\n"
-                    for display_col, data_col in numeric_cols[:2]:
-                        grouped = df.groupby(geo_col)[data_col].sum().sort_values(ascending=False).head(10)
-                        result += f"\n    {display_col}:\n"
-                        for name, value in grouped.items():
-                            result += f"      {name}: {value:,.2f}\n"
-            else:
-                result += "\nNo geographic columns found.\n"
-
-        # DEFAULT - General analysis
-        else:
-            result += "\nDATA ANALYSIS:\n"
-
-            # Show key metrics
-            result += "\nKey Metrics:\n"
-            for display_col, data_col in numeric_cols[:5]:
-                series = df[data_col].dropna()
-                if len(series) > 0:
-                    result += f"  {display_col}: Total={series.sum():,.2f}, Avg={series.mean():,.2f}\n"
-
-            # Show breakdown by first categorical
-            if cat_cols:
-                col = cat_cols[0]
-                if df[col].nunique() <= 15:
-                    result += f"\nBreakdown by {col}:\n"
-                    if numeric_cols:
-                        display_col, data_col = numeric_cols[0]
-                        grouped = df.groupby(col)[data_col].sum().sort_values(ascending=False)
-                        for name, value in grouped.items():
-                            result += f"  {name}: {value:,.2f}\n"
-
-        results.append(result)
-
-    return '\n'.join(results)
-
-@app.route('/')
-def index():
-    return render_template_string(HTML_TEMPLATE)
 
 @app.route('/api/files')
 def list_files():
-    """List all data files."""
+    """List available data files"""
     files = []
-    for f in os.listdir(DATA_FOLDER):
-        if f.endswith(('.csv', '.xlsx', '.xls')):
-            path = os.path.join(DATA_FOLDER, f)
-            files.append({
-                'name': f,
-                'size': os.path.getsize(path)
-            })
+    if os.path.exists(DATA_FOLDER):
+        for f in os.listdir(DATA_FOLDER):
+            if f.endswith(('.csv', '.xlsx', '.xls')):
+                path = os.path.join(DATA_FOLDER, f)
+                files.append({
+                    'name': f,
+                    'size': os.path.getsize(path)
+                })
     return jsonify(sorted(files, key=lambda x: x['name']))
+
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    """Upload a file."""
+    """Upload a data file"""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
 
@@ -500,79 +377,132 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    filepath = os.path.join(DATA_FOLDER, file.filename)
-    file.save(filepath)
-    return jsonify({'success': True, 'filename': file.filename})
+    if file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        filepath = os.path.join(DATA_FOLDER, file.filename)
+        file.save(filepath)
+        return jsonify({'success': True, 'filename': file.filename})
+
+    return jsonify({'error': 'Invalid file type'}), 400
+
+
+def detect_query_type(query):
+    """Detect the type of analysis needed based on query keywords"""
+    query_lower = query.lower()
+
+    if any(word in query_lower for word in ['summary', 'overview', 'describe', 'what is this', 'about']):
+        return 'summary', 'summary_analysis.py'
+    if any(word in query_lower for word in ['top', 'best', 'highest', 'most', 'largest', 'greatest', 'leading']):
+        return 'top', 'top_analysis.py'
+    if any(word in query_lower for word in ['compare', 'versus', 'vs', 'difference', 'between']):
+        return 'compare', 'compare_analysis.py'
+    if any(word in query_lower for word in ['trend', 'time', 'over time', 'growth', 'change', 'monthly', 'yearly', 'pattern']):
+        return 'trend', 'trend_analysis.py'
+    if any(word in query_lower for word in ['profit', 'margin', 'earnings', 'revenue', 'income', 'cost']):
+        return 'profit', 'profit_analysis.py'
+    if any(word in query_lower for word in ['region', 'location', 'geography', 'state', 'city', 'country', 'area']):
+        return 'region', 'region_analysis.py'
+    return 'custom', 'custom_query.py'
+
 
 @app.route('/api/analyze', methods=['POST'])
-def analyze_data():
-    """Analyze selected files."""
+def analyze():
+    """Analyze data using appropriate Python script"""
     data = request.json
-    files = data.get('files', [])
     query = data.get('query', '')
-    mode = data.get('mode', 'local')
+    files = data.get('files', [])
+
+    if not query:
+        return jsonify({'error': 'No query provided', 'script': 'N/A'})
 
     if not files:
-        return jsonify({'error': 'No files selected'})
+        return jsonify({'error': 'No files selected', 'script': 'N/A'})
 
-    # Load all dataframes
-    dataframes = {}
-    for filename in files:
-        filepath = os.path.join(DATA_FOLDER, filename)
-        if os.path.exists(filepath):
-            try:
-                dataframes[filename] = load_dataframe(filepath)
-            except Exception as e:
-                return jsonify({'error': f'Error loading {filename}: {str(e)}'})
+    file_paths = [os.path.join(DATA_FOLDER, f) for f in files]
 
-    # Try API mode first if selected, fallback to local
-    if mode == 'api':
-        try:
-            response = call_ai_api(dataframes, query)
-            return jsonify({'response': response})
-        except Exception as e:
-            # Fallback to local
-            response = analyze_locally(dataframes, query)
-            response = f"[API unavailable, using local analysis]\n{response}"
-            return jsonify({'response': response})
+    for fp in file_paths:
+        if not os.path.exists(fp):
+            return jsonify({'error': 'File not found: ' + fp, 'script': 'N/A'})
+
+    query_type, script_name = detect_query_type(query)
+    script_path = os.path.join(SCRIPTS_FOLDER, script_name)
+
+    if query_type == 'summary':
+        cmd = [sys.executable, script_path] + file_paths
     else:
-        # Local analysis
-        response = analyze_locally(dataframes, query)
-        return jsonify({'response': response})
+        cmd = [sys.executable, script_path, query] + file_paths
 
-def call_ai_api(dataframes, user_query):
-    """Call the OpenAnalyst API."""
-    context_text = ""
-    for filename, df in dataframes.items():
-        context_text += f"\n--- {filename} ---\n"
-        context_text += f"Rows: {len(df)}, Columns: {list(df.columns)}\n"
-        context_text += f"Sample:\n{df.head(10).to_string()}\n"
-        context_text += f"Stats:\n{df.describe(include='all').to_string()}\n"
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
 
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01"
-    }
+        output = result.stdout.strip()
+        if result.returncode != 0:
+            error_msg = result.stderr or 'Script execution failed'
+            return jsonify({'error': error_msg, 'script': script_name})
 
-    payload = {
-        "model": "claude-sonnet-4-20250514",
-        "max_tokens": 4096,
-        "system": "You are a data analyst. Provide clear, specific insights with numbers.",
-        "messages": [{"role": "user", "content": f"Data:\n{context_text}\n\nQuestion: {user_query}"}]
-    }
+        try:
+            output_data = json.loads(output)
+            return jsonify({
+                'result': output_data.get('result', output),
+                'title': output_data.get('title', 'Analysis'),
+                'success': output_data.get('success', True),
+                'script': script_name
+            })
+        except json.JSONDecodeError:
+            return jsonify({'result': output, 'script': script_name})
 
-    response = requests.post(f"{API_BASE_URL}/v1/messages", headers=headers, json=payload, timeout=120)
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Analysis timed out (2 min limit)', 'script': script_name})
+    except Exception as e:
+        return jsonify({'error': str(e), 'script': script_name})
 
-    if response.status_code != 200:
-        raise Exception(f"API Error: {response.status_code}")
 
-    return response.json()['content'][0]['text']
+@app.route('/api/web-search', methods=['POST'])
+def web_search():
+    """Perform web search using Perplexity API"""
+    data = request.json
+    query = data.get('query', '')
+
+    if not query:
+        return jsonify({'error': 'No query provided'})
+
+    script_path = os.path.join(SCRIPTS_FOLDER, 'web_search.py')
+    cmd = [sys.executable, script_path, query]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+
+        output = result.stdout.strip()
+        if result.returncode != 0:
+            error_msg = result.stderr or 'Web search failed'
+            return jsonify({'error': error_msg})
+
+        try:
+            output_data = json.loads(output)
+            return jsonify(output_data)
+        except json.JSONDecodeError:
+            return jsonify({'result': output})
+
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Web search timed out'})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 
 if __name__ == '__main__':
-    print("=" * 50)
-    print("Data Analysis App Starting...")
-    print(f"Data folder: {DATA_FOLDER}")
-    print("Open http://localhost:3000 in your browser")
-    print("=" * 50)
-    app.run(debug=True, port=3000, host='0.0.0.0')
+    print("\n" + "="*50)
+    print("  AI Data Analyst with Web Search")
+    print("  Running on: http://localhost:3000")
+    print("="*50 + "\n")
+    app.run(host='0.0.0.0', port=3000, debug=True)
