@@ -15,10 +15,10 @@ from config import PERPLEXITY_API_KEY, PERPLEXITY_API_URL, PERPLEXITY_MODEL
 def web_search(query):
     """Perform web search using Perplexity API"""
 
-    if PERPLEXITY_API_KEY == "YOUR_PERPLEXITY_API_KEY":
+    if not PERPLEXITY_API_KEY:
         return {
             "success": False,
-            "error": "Perplexity API key not configured. Please add your key to config.py"
+            "error": "Perplexity API key not configured. Please set PERPLEXITY_API_KEY in your .env file"
         }
 
     headers = {
